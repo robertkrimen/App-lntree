@@ -69,11 +69,11 @@ sub resolve {
     }
     else {
         my @path = File::Spec->splitdir( $path );
-        my $depth = @path - 1; # How many .. should be in the from path
-        $from_path = File::Spec->catpath( ( ( '..' ) x $depth ), File::Spec->abs2rel( $path, $to ) );
+        my $depth = @path - 2; # How many .. should be in the from path
+        $from_path = File::Spec->canonpath( join '/', ( ( '..' ) x $depth ), File::Spec->abs2rel( $path, $to ) );
     }
 
-    my $to_path = File::Spec->catpath( $to, File::Spec->abs2rel( $path, $from ) );
+    my $to_path = File::Spec->canonpath( join '/', File::Spec->abs2rel( $path, $from ) );
 
     return ( $from_path, $to_path );
 }
