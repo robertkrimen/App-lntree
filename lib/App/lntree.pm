@@ -1,5 +1,5 @@
 package App::lntree;
-# ABSTRACT: Create a symlink-based mirror of a directory
+# ABSTRACT: Create a best-effort symlink-based mirror of a directory
 
 use strict;
 use warnings;
@@ -29,6 +29,7 @@ sub run {
 
     usage "Missing <source>" unless defined $source;
     usage "Source directory ($source) does not exist or is not a directory" unless -d $source;
+    usage "Target directory ($target) already exists and is a file" if -f $target;
 
     $self->lntree( $source, $target );
 }
@@ -37,6 +38,11 @@ sub lntree {
     my $self = shift;
     my $source = shift;
     my $target = shift;
+
+    die "Missing source" unless defined $source;
+    die "Missing target" unless defined $target;
+    die "Source directory ($source) does not exist or is not a directory" unless -d $source;
+    die "Target directory ($target) already exists and is a file" if -f $target;
 
     $source = dir $source;
     $target = dir $target;
@@ -100,7 +106,7 @@ __END__
 
 =head1 DESCRIPTION
 
-App::lntree is a utility for making a symlink-based mirror of a directory. The algorithm is:
+App::lntree is a utility for making a best-effort symlink-based mirror of a directory. The algorithm is:
 
     - Directories are always recreated, NOT symlinked
     - A symlink conflict will be resolved by removing the original symlink

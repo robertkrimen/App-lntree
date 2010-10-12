@@ -4,7 +4,7 @@ use warnings;
 use Test::Most;
 
 use App::lntree;
-use File::Temp qw/ tempdir /;
+use File::Temp qw/ tempfile tempdir /;
 use Path::Class;
 
 my ( $source, $target, $readlink, $file, $directory );
@@ -36,5 +36,9 @@ is( file( $target, qw/ overwrite /)->stat->size, 8 );
 ok( !-l file $target, qw/ b overwrite / );
 ok( -l file $target, qw/ b d / );
 is( file( $target, qw/ b d /)->stat->size, 12 );
+
+$target = file( File::Temp->new->filename );
+$target->openw->print( '' );
+throws_ok { App::lntree->lntree( dir(qw/ t assets source1 /), $target ) } qr/already exists and is a file/;
 
 done_testing;
