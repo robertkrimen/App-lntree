@@ -1,15 +1,19 @@
 package App::lntree;
-# ABSTRACT: Create a link (symbolic or hard) tree 
+# ABSTRACT: Create a symlink-based mirror of a directory
 
 use strict;
 use warnings;
+
+# TODO Source as file, target as file?
+# TODO Absolute source, absolute target?
+# TODO Test file/directory/symlink overwriting
 
 use Path::Class;
 use File::Spec;
 use File::Spec::Link;
 use Getopt::Usaginator <<_END_;
 
-    Usage: lntree <src> <dst>
+    Usage: lntree <source> <target>
 
 _END_
 
@@ -18,37 +22,40 @@ sub run {
     my @arguments = @_;
 
     usage 0 unless @arguments;
-    usage "Missing <src> or <dst>" unless @arguments > 1;
+    usage "Missing <source> or <target>" unless @arguments > 1;
 
-    my $src = shift @arguments;
-    my $dst = shift @arguments;
+    my $source = shift @arguments;
+    my $target = shift @arguments;
 
-    usage "Missing <src>" unless defined $src;
-    usage "Source directory ($src) does not exist or is not a directory" unless -d $src;
+    usage "Missing <source>" unless defined $source;
+    usage "Source directory ($source) does not exist or is not a directory" unless -d $source;
 
-    $self->lntree( $src, $dst );
+    $self->lntree( $source, $target );
 }
 
 sub lntree {
     my $self = shift;
-    my $src = shift;
-    my $dst = shift;
+    my $source = shift;
+    my $target = shift;
 
-    $src = dir $src;
-    $dst = dir $dst;
-    my $absolute = $dst->is_absolute;
-    $src->recurse( callback => sub {
+    $source = dir $source;
+    $target = dir $target;
+    my $absolute = $target->is_absolute;
+    $source->recurse( callback => sub {
         my $file = shift;
-        my ( $from_path, $to_path ) = App::lntree->resolve( $src, $dst, $file );
+        my ( $from_path, $to_path ) = App::lntree->resolve( $source, $target, $file );
         if ( -d $file ) {
-            my $dir = $dst->subdir( $to_path );
+            my $dir = $target->subdir( $to_path );
             $dir->mkpath;
         }
         else {
-            my $file = $dst->file( $to_path );
+            my $file = $target->file( $to_path );
             my $link_path = $from_path;
             if ( -l $file ) {
                 unlink $file or warn "Unable to unlink symlink \"$to_path\": $!\n";
+            }
+            elsif ( -e $file ) {
+                return;
             }
             symlink $link_path, $file or die "Unable to symlink \"$link_path -> \"$to_path\": $!\n";
         }
@@ -79,3 +86,30 @@ sub resolve {
 }
 
 1;
+
+__END__
+
+=pod
+
+=head1 SYNOPSIS
+
+    lntree ~/project1 target/
+    lntree ~/project2 target/
+
+    # target/ is now a combination of project1 & project2, with project2 taking precedence
+
+=head1 DESCRIPTION
+
+App::lntree is a utility for making a symlink-based mirror of a directory. The algorithm is:
+
+    - Directories are always recreated, NOT symlinked
+    - A symlink conflict will be resolved by removing the original symlink
+    - Regular files (including directories) are left untouched
+
+=head1 USAGE
+
+=head2 lntree <source> <target>
+
+Create a symlink mirror of <source> into <target>, creating <target> if necessary
+
+=cut
